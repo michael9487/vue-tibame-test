@@ -9,7 +9,7 @@ defineProps({
 </script>
 
 <template>
-  <div class="news-card">
+  <div class="news-card" v-if="item">
     <img :src="data.image" class="news-bg" alt="News Image" />
 
     <div class="news-content">
