@@ -6,6 +6,8 @@ import MemberManagement from "../views/MemberManagement.vue";
 import ProductManagement from "../views/ProductManagement.vue";
 import OrderManagement from "../views/OrderManagement.vue";
 import ParallaxTest from "../views/ParallaxText.vue";
+import HomeTest from "../views/HomeTest.vue";
+import SurvivalTest from "../views/SurvivalTest.vue";
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -40,6 +42,16 @@ const router = createRouter({
       path: "/parallax-test",
       name: "ParallaxTest",
       component: ParallaxTest,
+    },
+    {
+      path: "/home-test",
+      name: "HomeTest",
+      component: HomeTest,
+    },
+    {
+      path: "/survival-test",
+      name: "SurvivalTest",
+      component: SurvivalTest,
     },
   ],
 });
