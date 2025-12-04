@@ -1,7 +1,3 @@
 <template>
-  <testCard />
+  <h2>Order Management</h2>
 </template>
-
-<script setup>
-import testCard from '@/components/testCard.vue'
-</script>
