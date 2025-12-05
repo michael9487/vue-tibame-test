@@ -83,3 +83,23 @@ nav a:first-of-type {
   }
 }
 </style> -->
+<style>
+/* 確保 html, body 和 #app 都是 100% 高度 */
+html, body, #app {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden; /* 防止捲軸 */
+}
+
+/* 將背景色設定在這裡，確保一定看得到 */
+body {
+  background: radial-gradient(
+    circle at 50% 30%,
+    #f4efe4,
+    #d3d7e8,
+    #7a8aa5
+  );
+}
+</style>
