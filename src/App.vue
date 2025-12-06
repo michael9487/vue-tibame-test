@@ -83,7 +83,7 @@ nav a:first-of-type {
   }
 }
 </style> -->
-<style>
+<style scoped>
 /* 確保 html, body 和 #app 都是 100% 高度 */
 html, body, #app {
   width: 100%;

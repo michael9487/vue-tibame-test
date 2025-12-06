@@ -775,10 +775,16 @@ function initSnitches(loader) {
 <style scoped>
 #container {
   width: 100%;
-  height: 100%;
+  height: 100vh;
   position: relative;
   overflow: hidden;
   touch-action: none;
+    background: radial-gradient(
+    circle at 50% 30%,
+    #f4efe4,
+    #d3d7e8,
+    #7a8aa5
+  );
 }
 canvas {
   display: block;

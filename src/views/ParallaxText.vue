@@ -118,7 +118,6 @@ const updates = ref([
 ]);
 
 onMounted(() => {
-  // --- Lenis 初始化 (平滑捲動) ---
   lenis.value = new Lenis({
     duration: 1.5,
     smooth: true,
@@ -130,20 +129,16 @@ onMounted(() => {
   }
   requestAnimationFrame(raf);
 
-  // --- GSAP 動畫 ---
-  // 使用 gsap.context 方便在元件銷毀時一次清理所有動畫
   ctx.value = gsap.context(() => {
-    // 1. 固定標題 (Pinning)
     ScrollTrigger.create({
       trigger: mainSection.value,
       start: "top top",
       end: "bottom bottom",
-      pin: ".pin-target",
+      pin: ".news-pin-target",
       pinSpacing: false,
     });
 
-    // 2. 卡片視差效果 (Parallax)
-    const parallaxCards = document.querySelectorAll(".parallax-card");
+    const parallaxCards = document.querySelectorAll(".news-parallax-card");
     parallaxCards.forEach((el) => {
       const speed = el.getAttribute("data-speed");
       gsap.to(el, {
@@ -160,48 +155,47 @@ onMounted(() => {
   }, mainSection.value);
 });
 
-// 當離開頁面時，清理動畫與捲動事件，避免記憶體洩漏
 onUnmounted(() => {
-  if (ctx.value) ctx.value.revert(); // 清除所有 GSAP ScrollTrigger
-  if (lenis.value) lenis.value.destroy(); // 停止 Lenis
+  if (ctx.value) ctx.value.revert();
+  if (lenis.value) lenis.value.destroy();
 });
 </script>
 
 <template>
-  <div class="page-container">
-    <section ref="mainSection" class="parallax-section">
-      <div class="sticky-title-wrapper pin-target">
-        <h2 class="main-text">I solemnly swear that I am up to no good.</h2>
+  <div class="news-page-container">
+    <section ref="mainSection" class="news-parallax-section">
+      <div class="news-sticky-title-wrapper news-pin-target">
+        <h2 class="news-main-text">I solemnly swear that I am up to no good.</h2>
       </div>
 
-      <div class="cards-container">
+      <div class="news-cards-container">
         <div
           v-for="card in cards"
           :key="card.id"
-          class="parallax-card"
+          class="news-parallax-card"
           :style="card.style"
           :data-speed="card.speed"
         >
-          <div class="card-inner">
+          <div class="news-card-inner">
             <img :src="card.src" alt="Magic Item" />
           </div>
         </div>
       </div>
     </section>
 
-    <section class="quote-section">
-      <div class="quote-content">
+    <section class="news-quote-section">
+      <div class="news-quote-content">
         <p>Curiosity, friction, iteration:</p>
         <p>The machinery of my design</p>
       </div>
     </section>
 
-    <section class="updates-section">
-      <div class="updates-header">
-        <h3 class="updates-title">UPDATES</h3>
+    <section class="news-updates-section">
+      <div class="news-updates-header">
+        <h3 class="news-updates-title">UPDATES</h3>
       </div>
 
-      <div class="updates-grid">
+      <div class="news-updates-grid">
         <NewsCard v-for="item in updates" :key="item.id" :data="item" />
       </div>
     </section>
@@ -213,25 +207,25 @@ onUnmounted(() => {
    這裡只保留該頁面特定的樣式 
 */
 
-.page-container {
+.news-page-container {
   width: 100%;
   position: relative;
-  background-color: #0a0a0a; /* 確保背景色 */
+  background-color: #0a0a0a;
   color: #ffffff;
-  font-family: "Cinzel", serif; /* 記得在 index.html 引入字體 */
+  font-family: "Cinzel", serif;
   overflow-x: hidden;
 }
 
 /* --- 視差區塊樣式 --- */
-.parallax-section {
+.news-parallax-section {
   position: relative;
   width: 100%;
-  height: 550vh; /* 長度決定捲動多久 */
+  height: 550vh;
   overflow: hidden;
   background-color: #0a0a0a;
 }
 
-.sticky-title-wrapper {
+.news-sticky-title-wrapper {
   position: absolute;
   top: 0;
   left: 0;
@@ -245,8 +239,8 @@ onUnmounted(() => {
   pointer-events: none;
 }
 
-.main-text {
-  font-size: 20px;
+.news-main-text {
+  font-size: 2.8rem;
   line-height: 1.1;
   text-align: center;
   color: #fff;
@@ -254,7 +248,7 @@ onUnmounted(() => {
 }
 
 /* 卡片容器 */
-.cards-container {
+.news-cards-container {
   position: absolute;
   top: 0;
   left: 0;
@@ -263,15 +257,19 @@ onUnmounted(() => {
   z-index: 1;
 }
 
-.parallax-card {
+.news-parallax-card {
   position: absolute;
   width: 270px;
   height: 290px;
   will-change: transform;
+  /* 若你希望連「點擊」都不要被這些卡片擋住（變成純裝飾背景），
+     可以把 auto 改成 none。
+     目前保留 auto 讓你以後想加點擊功能時可以直接用。
+  */
   pointer-events: auto !important;
 }
 
-.card-inner {
+.news-card-inner {
   width: 100%;
   height: 100%;
   position: relative;
@@ -280,24 +278,18 @@ onUnmounted(() => {
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
 }
 
-.card-inner img {
+.news-card-inner img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.5s ease;
+  /* 移除了 transition 和 filter，讓它保持原樣 */
   filter: sepia(20%) contrast(110%);
 }
 
-.parallax-card:hover {
-  z-index: 20 !important;
-}
-.parallax-card:hover .card-inner img {
-  transform: scale(1.1);
-  filter: sepia(0%) brightness(1.1);
-}
+/* ★ 已移除 hover 效果的 CSS */
 
 /* --- 引言區塊 --- */
-.quote-section {
+.news-quote-section {
   width: 100%;
   height: 100vh;
   background-color: #0a0a0a;
@@ -308,17 +300,17 @@ onUnmounted(() => {
   z-index: 30;
 }
 
-.quote-content {
+.news-quote-content {
   text-align: center;
   color: #e0e0e0;
-  font-size: 1.2rem;
+  font-size: 2.8rem;
   line-height: 2;
   letter-spacing: 1px;
   opacity: 0.9;
 }
 
 /* --- Updates 區塊 (排版層) --- */
-.updates-section {
+.news-updates-section {
   width: 100%;
   background-color: #0a0a0a;
   padding: 100px 5%;
@@ -326,23 +318,23 @@ onUnmounted(() => {
   z-index: 30;
 }
 
-.updates-header {
+.news-updates-header {
   margin-bottom: 40px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.3);
   padding-bottom: 15px;
 }
 
-.updates-title {
-  font-family: "Roboto", sans-serif; /* 記得在 index.html 引入字體 */
-  font-size: 1.5rem;
+.news-updates-title {
+  font-family: "Roboto", sans-serif;
+  font-size: 5.2rem;
   font-weight: 700;
   letter-spacing: 2px;
   text-transform: uppercase;
   color: #fff;
 }
 
-/* 網格系統：View 負責決定卡片怎麼排 */
-.updates-grid {
+/* 網格系統 */
+.news-updates-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 20px;
@@ -350,16 +342,16 @@ onUnmounted(() => {
 
 /* 響應式 */
 @media (max-width: 768px) {
-  .updates-grid {
+  .news-updates-grid {
     grid-template-columns: 1fr;
   }
-  .main-text {
+  .news-main-text {
     font-size: 15vw;
   }
-  .parallax-section {
+  .news-parallax-section {
     height: 450vh;
   }
-  .parallax-card {
+  .news-parallax-card {
     width: 160px;
     height: 180px;
   }
