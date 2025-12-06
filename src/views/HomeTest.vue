@@ -15,11 +15,14 @@
         <div class="envelope-flap"></div>
         <div class="wax-seal"></div>
       </div>
-
-      <div id="letter-content" ref="letterContentRef">
-        <LetterContent @action="triggerBurnAction" />
-      </div>
     </div>
+
+    <Transition name="fade">
+      <AdmissionLetter 
+        v-if="showLetter" 
+        @close="onLetterClose" 
+      />
+    </Transition>
   </div>
 </template>
 
@@ -27,7 +30,8 @@
 import { onMounted, onUnmounted, ref } from 'vue';
 import * as THREE from 'three';
 import gsap from 'gsap';
-import LetterContent from '@/components/LetterContent.vue';
+// 確保路徑正確
+import AdmissionLetter from '@/components/AdmissionLetter.vue';
 
 // --- Refs ---
 const containerRef = ref(null);
@@ -37,17 +41,16 @@ const logoWrapperRef = ref(null);
 const socketVisualRef = ref(null);
 const letterOverlayRef = ref(null);
 const envelopeContainerRef = ref(null);
-const letterContentRef = ref(null);
+
+// --- State ---
+const showLetter = ref(false); // 控制 AdmissionLetter 組件顯示
 
 // --- Variables ---
 let scene, camera, rendererBack, rendererFront;
-let sceneLetter, cameraLetter;
 let animationId;
-let isBurning = false;
 let isDragging = false;
 let draggedSnitchIdx = -1;
 let raycaster, mouse, dragPlane, dragOffset;
-let burnUniforms, ashParticles, particleMaterial, letterMesh;
 let clock;
 
 const snitches = [];
@@ -120,79 +123,55 @@ function updateDockedSnitchLock() {
 }
 
 // --- Interaction Logic ---
-const triggerBurnAction = (action, url = null) => {
-  if (isBurning) return;
-  isBurning = true;
 
-  const frontCanvas = canvasFrontRef.value;
-  frontCanvas.classList.add('burn-mode');
+// 處理 AdmissionLetter 發出的 close 事件
+// 修改 homeTest.vue 裡面的 onLetterClose
 
-  letterContentRef.value.classList.add('burning-active');
-  letterMesh.visible = true;
-  ashParticles.visible = true;
+const onLetterClose = () => {
+  // 1. 關閉 Vue 信紙組件
+  showLetter.value = false;
+  
+  // 2. 隱藏 HTML 遮罩層 (那個黑底)
+  if (letterOverlayRef.value) {
+    letterOverlayRef.value.style.display = 'none';
+  }
+  
+  // 3. 重置 HTML 信封的 CSS 狀態 (為了避免殘留樣式)
+  if (envelopeContainerRef.value) {
+    envelopeContainerRef.value.style.opacity = '0';
+    envelopeContainerRef.value.classList.remove('fade-out');
+    envelopeContainerRef.value.classList.remove('open');
+  }
 
-  letterMesh.position.set(0, 0, 0);
-  letterMesh.rotation.set(0, 0, 0);
-  burnUniforms.uProgress.value = 0;
-  particleMaterial.uniforms.uBurnProgress.value = 0;
+  // --- ★ 關鍵修改開始 ★ ---
+  
+  // 原本這裡會寫 remove('docked') 和 hero.isDocked = false
+  // 現在我們要「什麼都不做」，或者「確保它保持鎖定」
+  
+  const hero = snitches[0];
+  if (hero) {
+    // 確保它維持在鎖定狀態
+    hero.isDocked = true; 
+    
+    // 確保它維持在前景 (因為背景層會被 Logo 遮住)
+    hero.isFront = true; 
+    
+    // 維持較亮的亮度 (模擬卡在能量槽的發光感)
+    if (hero.heroLight) hero.heroLight.intensity = 4.6; 
+  }
 
-  const tl = gsap.timeline();
+  // 確保插槽視覺保持 "docked" (亮起) 狀態
+  // 不要移除 'docked' class
+  if (socketVisualRef.value) {
+    socketVisualRef.value.classList.add('docked');
+  }
 
-  tl.to(
-    letterMesh.position,
-    { y: 1.5, z: -4.0, duration: 2.5, ease: 'power1.in' },
-    '<'
-  );
-  tl.to(
-    letterMesh.rotation,
-    { x: -0.5, z: 0.1, duration: 2.5, ease: 'power1.inOut' },
-    '<'
-  );
-  tl.to(
-    burnUniforms.uProgress,
-    {
-      value: 1.3,
-      duration: 2.5,
-      ease: 'linear',
-      onUpdate: () => {
-        particleMaterial.uniforms.uBurnProgress.value =
-          burnUniforms.uProgress.value;
-      },
-    },
-    '<'
-  );
-
-  tl.call(() => {
-    if (action === 'redirect' && url) {
-      window.location.href = url;
-    } else {
-      letterOverlayRef.value.classList.remove('show');
-      letterOverlayRef.value.style.display = 'none';
-      frontCanvas.classList.remove('burn-mode');
-
-      setTimeout(() => {
-        isBurning = false;
-        letterMesh.visible = false;
-        ashParticles.visible = false;
-        letterContentRef.value.classList.remove('burning-active');
-
-        // ★ 不再把 hero snitch 從 dock 狀態解掉
-        // 如果你之後想讓它回到軌道再加邏輯
-
-        envelopeContainerRef.value.style.opacity = '0';
-        envelopeContainerRef.value.classList.remove('fade-out');
-        envelopeContainerRef.value.classList.remove('open');
-        letterContentRef.value.classList.remove('show');
-
-        if (socketVisualRef.value)
-          socketVisualRef.value.classList.remove('docked');
-      }, 500);
-    }
-  });
+  // --- ★ 關鍵修改結束 ★ ---
 };
 
 function onDragStart(event) {
-  if (isBurning) return;
+  // 如果信件開著，禁止拖曳
+  if (showLetter.value) return;
 
   // ★ hero 已經卡進洞，就不要再拖它
   if (snitches[0] && snitches[0].isDocked) {
@@ -274,13 +253,14 @@ function onDragEnd() {
         if (socketVisualRef.value)
           socketVisualRef.value.classList.add('docked');
 
-        // 顯示信封 & 信紙
+        // 1. 顯示 HTML 信封覆蓋層
         letterOverlayRef.value.style.display = 'flex';
         // 觸發 reflow
         // eslint-disable-next-line no-unused-expressions
         letterOverlayRef.value.offsetHeight;
         letterOverlayRef.value.style.opacity = '1';
 
+        // 2. 執行信封飛入與打開動畫
         const tl = gsap.timeline();
         gsap.set(envelopeContainerRef.value, {
           top: '-50%',
@@ -298,17 +278,28 @@ function onDragEnd() {
           scale: 0.8,
           rotationX: 70,
           rotation: 0,
-          duration: 2.5,
+          duration: 1.5,
           ease: 'power2.out',
         });
+        // 打開信封蓋
         tl.add(() => {
           envelopeContainerRef.value.classList.add('open');
         }, '+=0.1');
+        
+        // 3. 信封打開後，隱藏 HTML 信封，顯示 Vue AdmissionLetter 組件
         tl.add(() => {
-          letterContentRef.value.classList.add('show');
+          // 讓 HTML 信封淡出
           envelopeContainerRef.value.classList.add('fade-out');
         }, '+=0.5');
+        
+        tl.add(() => {
+           // 啟用全螢幕信紙組件
+           showLetter.value = true;
+           // 隱藏 HTML overlay 避免干擾點擊
+           letterOverlayRef.value.style.display = 'none';
+        }, '+=0.5'); // 等待淡出差不多後切換
       }
+      
       if (socketVisualRef.value)
         socketVisualRef.value.classList.remove('active');
     }
@@ -320,7 +311,7 @@ function onDragEnd() {
 }
 
 function onDocumentClick(event) {
-  if (isDragging || isBurning) return;
+  if (isDragging || showLetter.value) return;
   const pos = getClientPos(event);
   mouse.x = (pos.x / window.innerWidth) * 2 - 1;
   mouse.y = -(pos.y / window.innerHeight) * 2 + 1;
@@ -344,7 +335,7 @@ function onDocumentClick(event) {
 }
 
 function onMouseMoveHover(event) {
-  if (isDragging || isBurning) return;
+  if (isDragging || showLetter.value) return;
   snitches.forEach((s) => {
     const lbl = s.group.getObjectByName('snitchLabel');
     if (lbl) lbl.visible = false;
@@ -380,8 +371,6 @@ function onWindowResize() {
   const h = window.innerHeight;
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
-  cameraLetter.aspect = w / h;
-  cameraLetter.updateProjectionMatrix();
   rendererBack.setSize(w, h);
   rendererFront.setSize(w, h);
 
@@ -457,19 +446,13 @@ function animate() {
 
   rendererFront.clear();
 
-  if (!isBurning) {
-    snitches.forEach((s) => {
-      s.group.visible = s.isFront;
-    });
-    rendererFront.render(scene, camera);
-  }
-
-  if (isBurning && burnUniforms) {
-    burnUniforms.uTime.value = t;
-    particleMaterial.uniforms.uTime.value = t;
-    rendererFront.clearDepth();
-    rendererFront.render(sceneLetter, cameraLetter);
-  }
+  // 如果信件沒有顯示，才顯示前景的金探子 (或者你想在信件下也看到金探子，就拿掉這個 if)
+  // 這裡建議：信件顯示時，金探子繼續跑，但在信件下面
+  // 但由於 AdmissionLetter 是 fixed z-index 9999，它會自然蓋住 canvasFront
+  snitches.forEach((s) => {
+    s.group.visible = s.isFront;
+  });
+  rendererFront.render(scene, camera);
 }
 
 // --- Initialization ---
@@ -507,7 +490,7 @@ onMounted(() => {
   dirLight.position.set(5, 8, 4);
   scene.add(dirLight);
 
-  initBurnScene();
+  // 初始化金探子 (移除了 initBurnScene)
   initSnitches(textureLoader);
 
   raycaster = new THREE.Raycaster();
@@ -542,317 +525,7 @@ onUnmounted(() => {
   window.removeEventListener('mousemove', onMouseMoveHover);
 });
 
-// --- Setup Burn Scene ---
-// --- Setup Burn Scene (Hand-coded to match Vue CSS 1:1) ---
-function initBurnScene() {
-  sceneLetter = new THREE.Scene();
-  cameraLetter = new THREE.PerspectiveCamera(
-    45,
-    window.innerWidth / window.innerHeight,
-    0.1,
-    100
-  );
-  cameraLetter.position.z = 3.5;
-
-  const cvs = document.createElement('canvas');
-  // 解析度設定 (維持高解析度)
-  const cvsW = 1800;
-  const cvsH = 1300;
-  cvs.width = cvsW;
-  cvs.height = cvsH;
-  const ctx = cvs.getContext('2d');
-
-  // --- 1. 背景設定 (對應 CSS .modal-overlay) ---
-  ctx.clearRect(0, 0, cvsW, cvsH);
-  
-  // 羊皮紙色 + 0.95 透明度
-  ctx.fillStyle = 'rgba(244, 228, 188, 0.95)'; 
-  ctx.fillRect(0, 0, cvsW, cvsH);
-
-  // --- 排版參數 (對應 CSS Padding) ---
-  // CSS Padding: Top 54px, Side 20px
-  // 換算到 1800 寬度 Canvas (約 2.5倍)
-  const marginX = 50;   
-  const marginY = 140;  
-  const contentWidth = cvsW - (marginX * 2);
-  let currentY = marginY;
-
-  // 字體設定 (對應 CSS font-family: "Georgia")
-  const fontBase = 'Georgia, "Times New Roman", serif';
-  ctx.textAlign = 'left'; 
-
-  // --- 2. 標題繪製 (對應 .letter-header) ---
-  
-  // H1: Formosoul Institute of Magic
-  // CSS: color: #3e2723, font-size: 2.5rem (~80px on canvas)
-  ctx.fillStyle = '#3e2723'; 
-  ctx.font = `bold 80px ${fontBase}`;
-  ctx.fillText('Formosoul Institute of Magic', marginX, currentY + 60);
-  currentY += 90; 
-
-  // H2: Admission Notice
-  // CSS: color: #5d4037, font-size: 1.5rem (~50px on canvas)
-  ctx.fillStyle = '#5d4037';
-  ctx.font = `normal 50px ${fontBase}`;
-  ctx.fillText('Admission Notice', marginX, currentY + 40);
-  
-  currentY += 70; // H2 下方留一點空間給線條
-
-  // ★★★ 重點：標題底線 (對應 border-bottom) ★★★
-  // CSS: 2px solid rgba(90, 58, 34, 0.2)
-  ctx.beginPath();
-  ctx.moveTo(marginX, currentY); // 從左邊界開始
-  ctx.lineTo(cvsW - marginX, currentY); // 畫到右邊界
-  ctx.lineWidth = 5; // Canvas 解析度較高，線條要加粗一點才看得到
-  ctx.strokeStyle = 'rgba(90, 58, 34, 0.2)'; // 顏色完全對應
-  ctx.stroke();
-
-  // header margin-bottom: 30px -> Canvas ~70px
-  currentY += 70; 
-
-  // --- 3. 內文繪製 (對應 .letter-body) ---
-  // CSS: color: #3e2723, font-size: 1.1rem (~36px)
-  // CSS: line-height: 1.8 (~65px)
-  ctx.fillStyle = '#3e2723'; 
-  ctx.font = `36px ${fontBase}`; 
-  const lineHeight = 65; 
-  const paragraphSpacing = 50; // CSS margin-bottom: 24px -> ~50px
-
-  const rawText =
-    'Dear Prospective International Student,\n\nYou are about to step into this magical academy, hidden within the alleys of Taiwan, as an "Auditing Student" or "International Student." From this moment on, you will explore the daily life and magical wonders of Taiwan from the perspective of a visiting student.\n\nThe Academy has prepared six special courses and six interactive mini-games, guiding you to discover temples, night markets, local cuisine, and folk culture.\n\nThese games are scattered throughout different corners of the campus, waiting for you to find them. Successfully complete all the interactive games to graduate and receive a discount coupon from the Taiwan Magical Marketplace.\n\nYou may first explore the campus as an auditing student; after completing the games, if you wish to accumulate credits and save your progress, you can register at any time to receive your magical student ID.';
-
-  function wrapText(context, text, x, y, maxWidth, lh, paraSpace) {
-    const paragraphs = text.split('\n');
-    let cursorY = y;
-    paragraphs.forEach((paragraph) => {
-      if (paragraph === '') return;
-      const words = paragraph.split(' ');
-      let line = '';
-      for (let n = 0; n < words.length; n++) {
-        const testLine = line + words[n] + ' ';
-        const metrics = context.measureText(testLine);
-        if (metrics.width > maxWidth && n > 0) {
-          context.fillText(line, x, cursorY);
-          line = words[n] + ' ';
-          cursorY += lh;
-        } else {
-          line = testLine;
-        }
-      }
-      context.fillText(line, x, cursorY);
-      cursorY += lh + paraSpace; 
-    });
-    return cursorY;
-  }
-
-  wrapText(ctx, rawText, marginX, currentY, contentWidth, lineHeight, paragraphSpacing);
-
-  // --- 4. 底部區域 (Footer) ---
-  const bottomBaseY = cvsH - marginY; // 底部留白
-
-  // 4-1. 簽名 (左下)
-  // CSS: color: #3e2723, italic
-  ctx.fillStyle = '#3e2723';
-  ctx.font = `italic 34px ${fontBase}`;
-  const signLH = 50;
-  let signY = bottomBaseY - (signLH * 2.5); 
-  
-  ctx.fillText('Sincerely,', marginX, signY);
-  signY += signLH;
-  ctx.font = `italic 34px ${fontBase}`; 
-  ctx.fillText('Formosoul Institute of Magic', marginX, signY);
-  signY += signLH;
-  ctx.fillText('Office of Academic Affairs.', marginX, signY);
-
-  // 4-2. 按鈕 (右下)
-  const btnH = 85;        
-  const btnW_Audit = 320; 
-  const btnW_Reg = 280;   
-  const btnGap = 30;      
-  const btnRadius = 8;    
-  
-  const btnY = bottomBaseY - btnH;
-  const btnRegX = cvsW - marginX - btnW_Reg;
-  const btnAuditX = btnRegX - btnGap - btnW_Audit;
-
-  // [Audit 按鈕] 
-  // CSS: background: transparent, border: 2px solid #5a3a22, color: #5a3a22
-  ctx.strokeStyle = '#5a3a22';
-  ctx.lineWidth = 4; // 邊框
-  ctx.beginPath();
-  ctx.roundRect(btnAuditX, btnY, btnW_Audit, btnH, btnRadius);
-  ctx.stroke(); 
-  
-  ctx.textAlign = 'center';
-  ctx.fillStyle = '#5a3a22'; 
-  ctx.font = `bold 32px ${fontBase}`;
-  ctx.fillText('Audit the Academy', btnAuditX + (btnW_Audit / 2), btnY + 55);
-
-  // [Register 按鈕]
-  // CSS: background: #FFCC46 (你的新顏色), border: 2px solid #b4941f
-  ctx.fillStyle = '#FFCC46'; // 實心填充
-  ctx.beginPath();
-  ctx.roundRect(btnRegX, btnY, btnW_Reg, btnH, btnRadius);
-  ctx.fill();
-
-  // 邊框
-  ctx.strokeStyle = '#b4941f';
-  ctx.lineWidth = 4;
-  ctx.stroke();
-  
-  // 文字 CSS: color: #2c1e14
-  ctx.fillStyle = '#2c1e14'; 
-  ctx.font = `bold 32px ${fontBase}`;
-  ctx.fillText('Register Now', btnRegX + (btnW_Reg / 2), btnY + 55);
-
-  // --- Texture & Shader ---
-  const paperTex = new THREE.CanvasTexture(cvs);
-  paperTex.colorSpace = THREE.SRGBColorSpace; 
-
-  const vertexShader = `
-    varying vec2 vUv;
-    void main() {
-      vUv = uv;
-      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-    }
-  `;
-  
-  const fragmentShader = `
-    uniform float uTime;
-    uniform float uProgress;
-    uniform sampler2D uTexture;
-    varying vec2 vUv;
-    float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
-    float noise(vec2 p) {
-      vec2 i = floor(p);
-      vec2 f = fract(p);
-      f = f * f * (3.0 - 2.0 * f);
-      return mix(
-        mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x),
-        mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x),
-        f.y
-      );
-    }
-    float fbm(vec2 p) {
-      float v = 0.0;
-      float a = 0.5;
-      for (int i = 0; i < 5; i++) {
-        v += a * noise(p);
-        p = p * 2.0 + 0.2;
-        a *= 0.5;
-      }
-      return v;
-    }
-    void main() {
-      vec2 uv = vUv;
-      vec4 texColor = texture2D(uTexture, uv);
-      float fireNoise = fbm(uv * 5.0 + vec2(0.0, uTime * 2.0));
-      float gradient = uv.y;
-      
-      float threshold = uProgress * 1.5 - 0.2;
-      float burnVal = gradient + fireNoise * 0.15;
-      float diff = burnVal - threshold;
-
-      if (diff < 0.0) {
-        discard; 
-      } else if (diff < 0.1) {
-        float t = diff / 0.1;
-        vec3 fireCol = mix(vec3(4.0, 2.0, 0.5), vec3(1.0, 0.4, 0.0), t);
-        fireCol = mix(fireCol, vec3(0.2, 0.0, 0.0), smoothstep(0.4, 1.0, t));
-        gl_FragColor = vec4(fireCol, 1.0);
-      } else if (diff < 0.15) {
-        float t = (diff - 0.1) / 0.05;
-        vec3 charCol = mix(vec3(0.0), texColor.rgb, t);
-        gl_FragColor = vec4(charCol, texColor.a);
-      } else {
-        gl_FragColor = texColor;
-      }
-    }
-  `;
-
-  burnUniforms = {
-    uTime: { value: 0 },
-    uProgress: { value: 0 },
-    uTexture: { value: paperTex },
-  };
-
-  const material = new THREE.ShaderMaterial({
-    vertexShader,
-    fragmentShader,
-    uniforms: burnUniforms,
-    side: THREE.DoubleSide,
-    transparent: true,     
-    depthWrite: false,     // 確保不會擋住背後的金探子
-  });
-
-  const geometry = new THREE.PlaneGeometry(3.6, 2.6, 60, 60);
-  letterMesh = new THREE.Mesh(geometry, material);
-  letterMesh.visible = false;
-  sceneLetter.add(letterMesh);
-
-  // --- 粒子系統 (這部分不用動) ---
-  const particleCount = 2000;
-  const posArray = new Float32Array(particleCount * 3);
-  const randomArray = new Float32Array(particleCount);
-  const sizeArray = new Float32Array(particleCount);
-  for (let i = 0; i < particleCount; i++) {
-    posArray[i * 3] = (Math.random() - 0.5) * 3.6;
-    posArray[i * 3 + 1] = (Math.random() - 0.5) * 2.6;
-    posArray[i * 3 + 2] = (Math.random() - 0.5) * 0.5;
-    randomArray[i] = Math.random();
-    sizeArray[i] = Math.random();
-  }
-  const particlesGeo = new THREE.BufferGeometry();
-  particlesGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
-  particlesGeo.setAttribute('aRandom', new THREE.BufferAttribute(randomArray, 1));
-  particlesGeo.setAttribute('aSize', new THREE.BufferAttribute(sizeArray, 1));
-
-  particleMaterial = new THREE.ShaderMaterial({
-    vertexShader: `
-      uniform float uTime;
-      uniform float uBurnProgress;
-      attribute float aRandom;
-      attribute float aSize;
-      varying float vLife;
-      void main() {
-        vec3 pos = position;
-        float normalizedY = (pos.y + 1.3) / 2.6;
-        float threshold = uBurnProgress * 1.5 - 0.2;
-        vLife = 0.0;
-        if (threshold > normalizedY) {
-          float flyTime = (threshold - normalizedY) * 2.5;
-          pos.y += flyTime * (2.0 + aRandom);
-          pos.x += sin(flyTime * 5.0 + aRandom * 10.0) * 0.15;
-          pos.z += cos(flyTime * 3.0) * 0.5;
-          vLife = 1.0 - flyTime * 0.4;
-        }
-        vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
-        gl_Position = projectionMatrix * mvPosition;
-        gl_PointSize = (8.0 * aSize + 4.0) * vLife * (1.0 / -mvPosition.z);
-      }
-    `,
-    fragmentShader: `
-      varying float vLife;
-      void main() {
-        if (vLife <= 0.0) discard;
-        vec2 uv = gl_PointCoord - 0.5;
-        float dist = length(uv);
-        if (dist > 0.5) discard;
-        vec3 color = mix(vec3(1.0, 0.5, 0.1), vec3(0.1, 0.1, 0.1), vLife);
-        float alpha = smoothstep(0.5, 0.0, dist) * vLife;
-        gl_FragColor = vec4(color, alpha);
-      }
-    `,
-    uniforms: { uTime: { value: 0 }, uBurnProgress: { value: 0 } },
-    transparent: true,
-    depthWrite: false, 
-    blending: THREE.AdditiveBlending,
-  });
-  ashParticles = new THREE.Points(particlesGeo, particleMaterial);
-  ashParticles.visible = false;
-  sceneLetter.add(ashParticles);
-}
-// --- Setup Snitches ---
+// --- Setup Snitches (保持不變) ---
 function initSnitches(loader) {
   const ballMaterial = new THREE.MeshStandardMaterial({
     color: 0xffd27f,
@@ -1120,9 +793,7 @@ canvas {
   z-index: 2;
   pointer-events: none;
 }
-#canvas-front.burn-mode {
-  z-index: 101 !important;
-}
+/* 移除 .burn-mode 相關樣式，因為現在由 AdmissionLetter 組件處理 */
 
 /* Logo & Socket */
 #logo-wrapper {
@@ -1253,7 +924,7 @@ canvas {
   transition: opacity 0.1s;
 }
 
-/* Letter Overlay */
+/* Letter Overlay (只保留 HTML 信封動畫部分) */
 #letter-overlay {
   position: fixed;
   inset: 0;
@@ -1376,44 +1047,13 @@ canvas {
   transition: opacity 0.5s ease-out;
 }
 
-/* Letter Content Wrapper */
-#letter-content {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%) scale(0.1);
-  width: 95%;
-  max-width: 1200px;
-  height: 90vh;
-  max-height: none;
-  background-color: #f3eada;
-  background-image:
-    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.1'/%3E%3C/svg%3E"),
-    radial-gradient(
-      circle at 50% 50%,
-      rgba(255, 255, 255, 0) 20%,
-      rgba(139, 111, 71, 0.15) 100%
-    );
-  border: 1px solid #cda;
-  border-radius: 4px;
-  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+/* Transition Animation for AdmissionLetter Component */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.5s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
   opacity: 0;
-  overflow-y: auto;
-  scrollbar-width: none;
-  z-index: 20;
-  transition: all 0.8s
-    cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-#letter-content::-webkit-scrollbar {
-  display: none;
-}
-#letter-content.show {
-  opacity: 1;
-  transform: translate(-50%, -50%) scale(1);
-}
-#letter-content.burning-active {
-  opacity: 0 !important;
-  visibility: hidden !important;
-  transition: none !important;
 }
 </style>
