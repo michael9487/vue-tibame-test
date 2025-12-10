@@ -24,6 +24,9 @@
     <router-link class="linktosurvival" :to="{ name: 'SurvivalTest' }">
       <button>前往生存頁面</button>
     </router-link>
+    <router-link class="linktosurvival backend" :to="{ name: 'MemberManagement' }">
+      <button>前往後台</button>
+    </router-link>
   </div>
 </template>
 
@@ -1031,6 +1034,9 @@ canvas {
   left: 20px; /* 距離左側 20px */
   z-index: 1000; /* 確保在最上層 */
   cursor: pointer;
+}
+.linktosurvival.backend{
+  left: 200px;
 }
 .linktosurvival button {
   padding: 10px 20px;

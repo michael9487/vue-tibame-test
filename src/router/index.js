@@ -51,21 +51,24 @@ const router = createRouter({
     {
       path: "/dashboard",
       component: AdminDashboard,
-      redirect: "/dashboard/member-management", // 預設顯示會員頁
       children: [
         {
-          path: "member-management",
-          name: "member-management",
+          path: '', 
+          redirect: { name: 'MemberManagement' } 
+        },
+        {
+          path: "/member-management",
+          name: "MemberManagement",
           component: MemberManagement,
         },
         {
           path: "product-management",
-          name: "product-management",
+          name: "ProductManagement",
           component: ProductManagement,
         },
         {
           path: "order-management",
-          name: "order-management",
+          name: "OrderManagement",
           component: OrderManagement,
         },
       ],

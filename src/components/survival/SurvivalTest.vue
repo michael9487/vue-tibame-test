@@ -7,6 +7,8 @@ import lanternImg from "@/assets/sur-lantern.png";
 import nightImg from "@/assets/sur-night.png";
 import storeImg from "@/assets/sur-convenience.png";
 import taiwanImg from "@/assets/sur-taiwan.png";
+import CustomModal from "@/components/CustomModal.vue" // 請確認路徑正確
+
 // 這裡假設你有臭豆腐圖，沒有的話請換回 placeholder
 const tofuPlaceholder = "https://placehold.co/150x150/e67e22/fff?text=Tofu";
 
@@ -20,6 +22,7 @@ const images = {
 
 // --- 2. 狀態管理 ---
 const activeScene = ref(null);
+const showModal = ref(false); // 控制 Modal 開關
 
 const onHover = (scene) => {
   activeScene.value = scene;
@@ -29,13 +32,8 @@ const onLeave = () => {
   activeScene.value = null;
 };
 
-const enterScene = (type) => {
-  console.log("Enter scene:", type);
-  // router.push(...)
-};
-
 onMounted(() => {
-  // --- GSAP 漂浮動畫 (保持原本設定) ---
+  // --- GSAP 漂浮動畫 ---
   gsap.to(".lantern-img", {
     y: 10,
     rotation: 5,
@@ -107,7 +105,12 @@ onMounted(() => {
         @mouseenter="onHover('night-market')"
         @mouseleave="onLeave"
       >
-        <img :src="images.tofu" alt="Stinky Tofu" class="tofu-img" />
+        <img 
+          :src="images.tofu" 
+          alt="Stinky Tofu" 
+          class="tofu-img cursor-pointer" 
+          @click.stop="showModal = true" 
+        />
 
         <div class="float-target">
           <div class="island-img-wrapper">
@@ -127,12 +130,19 @@ onMounted(() => {
           <div class="info-card">
             <p class="info-text">
               Taiwan's night markets are known for food, games. Stinky tofu,
-              braised pork rice, are must-tries, showing the heart of local
-              Taiwanese culture.
+              braised pork rice, are must-tries.
             </p>
-            <router-link :to="{ name: 'NightMarketMap' }">
-              <button class="enter-btn">Enter</button>
-            </router-link>
+            
+            <div class="btn-group">
+              <router-link :to="{ name: 'NightMarketMap' }">
+                <button class="enter-btn">Enter</button>
+              </router-link>
+              
+              <button class="modal-btn" @click="showModal = true">
+                介紹 / Intro
+              </button>
+            </div>
+
           </div>
         </div>
       </div>
@@ -157,6 +167,20 @@ onMounted(() => {
         </div>
       </div>
     </main>
+
+    <CustomModal v-model="showModal">
+      <div class="my-content">
+        <div class="left-text">
+          <h2>臭豆腐 (Stinky Tofu)</h2>
+          <p>這是台灣最好吃的小吃，聞起來臭，吃起來香！</p>
+          <p>It smells strong but tastes amazing.</p>
+        </div>
+        <div class="right-img">
+          <img :src="images.tofu" style="width:100%; height:100%; object-fit:cover;"/>
+        </div>
+      </div>
+    </CustomModal>
+
     <div class="bg-glow"></div>
     <router-view />
   </div>
@@ -248,7 +272,6 @@ onMounted(() => {
   max-width: 1400px;
   z-index: 10;
   padding: 0 2%;
-  /* 容器本身不動，我們動裡面的 group */
 }
 
 /* --- Divider --- */
@@ -282,7 +305,6 @@ onMounted(() => {
   flex-direction: column;
   align-items: center;
   cursor: pointer;
-  /* 關鍵轉場設定：讓移動看起來像推擠 */
   transition: transform 0.8s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.3s;
   z-index: 10;
 }
@@ -299,7 +321,6 @@ onMounted(() => {
   filter: drop-shadow(0 30px 40px rgba(0, 0, 0, 0.6));
 }
 
-/* 底部標題 (原本的) */
 .island-title {
   font-size: 2.5rem;
   font-weight: 700;
@@ -308,7 +329,6 @@ onMounted(() => {
   transition: opacity 0.3s, transform 0.3s;
 }
 
-/* 台灣地圖 */
 .taiwan-map {
   position: absolute;
   top: -50px;
@@ -319,8 +339,6 @@ onMounted(() => {
 }
 
 /* --- 隱藏元素 (Hover 顯示) --- */
-
-/* 1. 臭豆腐 */
 .tofu-img {
   position: absolute;
   top: -80px;
@@ -331,32 +349,36 @@ onMounted(() => {
   opacity: 0;
   transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
+/* 讓臭豆腐滑鼠變成手手，提示可點擊 */
+.cursor-pointer {
+  cursor: pointer;
+}
+.cursor-pointer:hover {
+  filter: brightness(1.2);
+}
 
-/* 2. 詳細資訊面板 (包含新標題 + 卡片) */
 .details-panel {
   position: absolute;
   top: 50%;
-  left: 90%; /* 位於圖片右側 */
-  transform: translateY(-50%) translateX(30px); /* 初始位置稍微偏右 */
+  left: 90%; 
+  transform: translateY(-50%) translateX(30px);
   display: flex;
   flex-direction: column;
-  align-items: flex-start; /* 靠左對齊 */
+  align-items: flex-start; 
   opacity: 0;
   pointer-events: none;
   z-index: 40;
   transition: all 0.5s ease 0.1s;
 }
 
-/* 2.1 新標題 */
 .detail-title {
-  font-size: 3rem; /* 大標題 */
+  font-size: 3rem; 
   font-weight: 700;
   margin-bottom: 20px;
   text-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
-  white-space: nowrap; /* 不換行 */
+  white-space: nowrap; 
 }
 
-/* 2.2 資訊卡 */
 .info-card {
   width: 300px;
   background: rgba(255, 255, 255, 0.95);
@@ -373,8 +395,16 @@ onMounted(() => {
   margin-bottom: 20px;
   font-weight: 500;
 }
+
+/* 按鈕群組樣式 */
+.btn-group {
+  display: flex;
+  gap: 10px;
+}
+
+/* 進入按鈕 */
 .enter-btn {
-  width: 100%;
+  flex: 1;
   padding: 12px;
   background-color: #f1c40f;
   border: none;
@@ -388,44 +418,44 @@ onMounted(() => {
   background-color: #f39c12;
 }
 
-/* =========================================
-   ★ 互動狀態 (Active States)
-   ========================================= */
+/* ★ 新增的 Modal 按鈕樣式 */
+.modal-btn {
+  flex: 1;
+  padding: 12px;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: bold;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+.modal-btn:hover {
+  background-color: #2980b9;
+}
 
-/* 當模式為 Night Market 時 */
-
-/* 1. 中間 Select 隱藏 */
+/* --- Active States --- */
 .mode-night-market .divider {
   opacity: 0;
   transform: translate(-50%, -50%) scale(0.8);
 }
-
-/* 2. 右邊島嶼：被推開 (往右飛出) */
 .mode-night-market .island-right-group {
-  transform: translateX(100vw); /* 直接飛出螢幕 */
+  transform: translateX(100vw);
   opacity: 0;
   pointer-events: none;
 }
-
-/* 3. 左邊島嶼：往右移 (推擠效果) */
 .mode-night-market .island-left-group {
-  /* 往右移動 300px (或是 20vw)，營造擠開右邊的感覺 */
   transform: translateX(300px) scale(1.1);
 }
-
-/* 4. 隱藏原本下方的標題 */
 .mode-night-market .island-left-group .original-title {
   opacity: 0;
   transform: translateY(20px);
 }
-
-/* 5. 顯示臭豆腐 */
 .mode-night-market .tofu-img {
   opacity: 1;
   transform: translateX(-50%) scale(1);
 }
-
-/* 6. 顯示右側詳細面板 (新標題 + 卡片) */
 .mode-night-market .details-panel {
   opacity: 1;
   transform: translateY(-50%) translateX(0);
@@ -460,8 +490,15 @@ onMounted(() => {
   }
 }
 
+/* Modal 內容樣式 */
+.my-content {
+  display: flex;
+  height: 100%;
+}
+.left-text { flex: 1; padding: 40px; color: #333; overflow-y: auto;}
+.right-img { flex: 1; background: #eee; }
+
 @media (max-width: 1200px) {
-  /* 平板時移動距離縮小 */
   .mode-night-market .island-left-group {
     transform: translateX(150px) scale(1.05);
   }
@@ -479,6 +516,6 @@ onMounted(() => {
   }
   .mode-night-market .island-left-group {
     transform: none;
-  } /* 手機版取消位移 */
+  }
 }
 </style>
