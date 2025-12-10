@@ -7,28 +7,43 @@ import ProductManagement from "../views/ProductManagement.vue";
 import OrderManagement from "../views/OrderManagement.vue";
 import ParallaxTest from "../views/ParallaxText.vue";
 import HomeTest from "../views/HomeTest.vue";
-import SurvivalTest from "../views/SurvivalTest.vue";
-import ClassesTest from '../views/classesTest.vue'
+import ClassesTest from "../views/classesTest.vue";
+import SurvivalRules from "@/views/SurvivalRules.vue";
+import SurvivalTest from "../components/survival/SurvivalTest.vue";
+import NightMarketMap from "../components/survival/NightMarketMap.vue";
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
-      path: '/',
-      name: 'HomeTest',
+      path: "/",
+      name: "HomeTest",
       component: HomeTest,
     },
-        {
+    {
       path: "/parallax-test",
       name: "ParallaxTest",
       component: ParallaxTest,
     },
     {
-      path: "/survival-test",
-      name: "SurvivalTest",
-      component: SurvivalTest,
+      path: "/survival-rules",
+      name: "SurvivalRules",
+      component: SurvivalRules,
+      children: [
+        {
+          // 空路徑代表預設顯示 (雙島選擇畫面)
+          path: "",
+          name: "SurvivalTest",
+          component: SurvivalTest,
+        },
+        {
+          path: "nightmarket-map",
+          name: "NightMarketMap",
+          component: NightMarketMap,
+        },
+      ],
     },
-     {
+    {
       path: "/classes-test",
       name: "ClassesTest",
       component: ClassesTest,
@@ -55,7 +70,6 @@ const router = createRouter({
         },
       ],
     },
-
   ],
 });
 

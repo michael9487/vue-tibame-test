@@ -130,9 +130,9 @@ onMounted(() => {
               braised pork rice, are must-tries, showing the heart of local
               Taiwanese culture.
             </p>
-            <button class="enter-btn" @click.stop="enterScene('night-market')">
-              Enter
-            </button>
+            <router-link :to="{ name: 'NightMarketMap' }">
+              <button class="enter-btn">Enter</button>
+            </router-link>
           </div>
         </div>
       </div>
@@ -157,8 +157,8 @@ onMounted(() => {
         </div>
       </div>
     </main>
-
     <div class="bg-glow"></div>
+    <router-view />
   </div>
 </template>
 

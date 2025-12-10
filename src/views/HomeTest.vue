@@ -1,7 +1,7 @@
 <template>
   <div id="container" ref="containerRef">
     <canvas id="canvas-back" ref="canvasBackRef"></canvas>
-    
+
     <div id="logo-wrapper" ref="logoWrapperRef">
       <img id="logo-img" src="/home-logo.png" alt="Formosoul Logo" />
       <div id="socket-visual" ref="socketVisualRef"></div>
@@ -18,20 +18,21 @@
     </div>
 
     <Transition name="fade">
-      <AdmissionLetter 
-        v-if="showLetter" 
-        @close="onLetterClose" 
-      />
+      <AdmissionLetter v-if="showLetter" @close="onLetterClose" />
     </Transition>
+
+    <router-link class="linktosurvival" :to="{ name: 'SurvivalTest' }">
+      <button>前往生存頁面</button>
+    </router-link>
   </div>
 </template>
 
 <script setup>
-import { onMounted, onUnmounted, ref } from 'vue';
-import * as THREE from 'three';
-import gsap from 'gsap';
+import { onMounted, onUnmounted, ref } from "vue";
+import * as THREE from "three";
+import gsap from "gsap";
 // 確保路徑正確
-import AdmissionLetter from '@/components/AdmissionLetter.vue';
+import AdmissionLetter from "@/components/AdmissionLetter.vue";
 
 // --- Refs ---
 const containerRef = ref(null);
@@ -61,7 +62,10 @@ const checkIsMobile = () => window.innerWidth < 768;
 
 function getClientPos(event) {
   if (event.changedTouches && event.changedTouches.length > 0) {
-    return { x: event.changedTouches[0].clientX, y: event.changedTouches[0].clientY };
+    return {
+      x: event.changedTouches[0].clientX,
+      y: event.changedTouches[0].clientY,
+    };
   }
   return { x: event.clientX, y: event.clientY };
 }
@@ -125,55 +129,41 @@ function updateDockedSnitchLock() {
 // --- Interaction Logic ---
 
 // 處理 AdmissionLetter 發出的 close 事件
-// 修改 homeTest.vue 裡面的 onLetterClose
-
 const onLetterClose = () => {
   // 1. 關閉 Vue 信紙組件
   showLetter.value = false;
-  
+
   // 2. 隱藏 HTML 遮罩層 (那個黑底)
   if (letterOverlayRef.value) {
-    letterOverlayRef.value.style.display = 'none';
-  }
-  
-  // 3. 重置 HTML 信封的 CSS 狀態 (為了避免殘留樣式)
-  if (envelopeContainerRef.value) {
-    envelopeContainerRef.value.style.opacity = '0';
-    envelopeContainerRef.value.classList.remove('fade-out');
-    envelopeContainerRef.value.classList.remove('open');
+    letterOverlayRef.value.style.display = "none";
   }
 
-  // --- ★ 關鍵修改開始 ★ ---
-  
-  // 原本這裡會寫 remove('docked') 和 hero.isDocked = false
-  // 現在我們要「什麼都不做」，或者「確保它保持鎖定」
-  
+  // 3. 重置 HTML 信封的 CSS 狀態 (為了避免殘留樣式)
+  if (envelopeContainerRef.value) {
+    envelopeContainerRef.value.style.opacity = "0";
+    envelopeContainerRef.value.classList.remove("fade-out");
+    envelopeContainerRef.value.classList.remove("open");
+  }
+
   const hero = snitches[0];
   if (hero) {
     // 確保它維持在鎖定狀態
-    hero.isDocked = true; 
-    
-    // 確保它維持在前景 (因為背景層會被 Logo 遮住)
-    hero.isFront = true; 
-    
-    // 維持較亮的亮度 (模擬卡在能量槽的發光感)
-    if (hero.heroLight) hero.heroLight.intensity = 4.6; 
+    hero.isDocked = true;
+    // 確保它維持在前景
+    hero.isFront = true;
+    // 維持較亮的亮度
+    if (hero.heroLight) hero.heroLight.intensity = 4.6;
   }
 
   // 確保插槽視覺保持 "docked" (亮起) 狀態
-  // 不要移除 'docked' class
   if (socketVisualRef.value) {
-    socketVisualRef.value.classList.add('docked');
+    socketVisualRef.value.classList.add("docked");
   }
-
-  // --- ★ 關鍵修改結束 ★ ---
 };
 
 function onDragStart(event) {
-  // 如果信件開著，禁止拖曳
   if (showLetter.value) return;
 
-  // ★ hero 已經卡進洞，就不要再拖它
   if (snitches[0] && snitches[0].isDocked) {
     return;
   }
@@ -195,7 +185,7 @@ function onDragStart(event) {
 
     if (event.cancelable) event.preventDefault();
     let rootGroup = intersects[0].object;
-    while (rootGroup.parent && rootGroup.parent.type !== 'Scene') {
+    while (rootGroup.parent && rootGroup.parent.type !== "Scene") {
       rootGroup = rootGroup.parent;
     }
 
@@ -203,9 +193,9 @@ function onDragStart(event) {
     if (idx !== -1) {
       draggedSnitchIdx = idx;
       isDragging = true;
-      containerRef.value.classList.add('dragging');
+      containerRef.value.classList.add("dragging");
       if (idx === 0 && socketVisualRef.value)
-        socketVisualRef.value.classList.add('active');
+        socketVisualRef.value.classList.add("active");
 
       const p = intersects[0].point;
       dragPlane.setFromNormalAndCoplanarPoint(
@@ -243,28 +233,27 @@ function onDragEnd() {
         const targetPos = getHoleWorldPos();
 
         hero.isDocked = true;
-        hero.lockedPosition = targetPos.clone(); // ★ 鎖定世界座標
+        hero.lockedPosition = targetPos.clone();
         hero.group.position.copy(targetPos);
-        hero.group.position.z = targetPos.z; // 給穩定 z 值
+        hero.group.position.z = targetPos.z;
         hero.group.lookAt(0, 0, 0);
         hero.isFront = true;
 
         if (hero.heroLight) hero.heroLight.intensity = 4.6;
         if (socketVisualRef.value)
-          socketVisualRef.value.classList.add('docked');
+          socketVisualRef.value.classList.add("docked");
 
         // 1. 顯示 HTML 信封覆蓋層
-        letterOverlayRef.value.style.display = 'flex';
-        // 觸發 reflow
+        letterOverlayRef.value.style.display = "flex";
         // eslint-disable-next-line no-unused-expressions
-        letterOverlayRef.value.offsetHeight;
-        letterOverlayRef.value.style.opacity = '1';
+        letterOverlayRef.value.offsetHeight; // reflow
+        letterOverlayRef.value.style.opacity = "1";
 
         // 2. 執行信封飛入與打開動畫
         const tl = gsap.timeline();
         gsap.set(envelopeContainerRef.value, {
-          top: '-50%',
-          left: '50%',
+          top: "-50%",
+          left: "50%",
           xPercent: -50,
           yPercent: -50,
           scale: 0.2,
@@ -274,39 +263,36 @@ function onDragEnd() {
           zIndex: 10,
         });
         tl.to(envelopeContainerRef.value, {
-          top: '60%',
+          top: "60%",
           scale: 0.8,
           rotationX: 70,
           rotation: 0,
           duration: 1.5,
-          ease: 'power2.out',
+          ease: "power2.out",
         });
         // 打開信封蓋
         tl.add(() => {
-          envelopeContainerRef.value.classList.add('open');
-        }, '+=0.1');
-        
+          envelopeContainerRef.value.classList.add("open");
+        }, "+=0.1");
+
         // 3. 信封打開後，隱藏 HTML 信封，顯示 Vue AdmissionLetter 組件
         tl.add(() => {
-          // 讓 HTML 信封淡出
-          envelopeContainerRef.value.classList.add('fade-out');
-        }, '+=0.5');
-        
+          envelopeContainerRef.value.classList.add("fade-out");
+        }, "+=0.5");
+
         tl.add(() => {
-           // 啟用全螢幕信紙組件
-           showLetter.value = true;
-           // 隱藏 HTML overlay 避免干擾點擊
-           letterOverlayRef.value.style.display = 'none';
-        }, '+=0.5'); // 等待淡出差不多後切換
+          showLetter.value = true;
+          letterOverlayRef.value.style.display = "none";
+        }, "+=0.5");
       }
-      
+
       if (socketVisualRef.value)
-        socketVisualRef.value.classList.remove('active');
+        socketVisualRef.value.classList.remove("active");
     }
 
     isDragging = false;
     draggedSnitchIdx = -1;
-    containerRef.value.classList.remove('dragging');
+    containerRef.value.classList.remove("dragging");
   }
 }
 
@@ -324,9 +310,9 @@ function onDocumentClick(event) {
       obj = obj.parent;
     }
     if (obj && obj.userData.isLink) {
-      document.body.style.cursor = 'wait';
+      document.body.style.cursor = "wait";
       setTimeout(() => {
-        document.body.style.cursor = 'default';
+        document.body.style.cursor = "default";
         window.location.href = obj.userData.url;
       }, 100);
       return;
@@ -337,7 +323,7 @@ function onDocumentClick(event) {
 function onMouseMoveHover(event) {
   if (isDragging || showLetter.value) return;
   snitches.forEach((s) => {
-    const lbl = s.group.getObjectByName('snitchLabel');
+    const lbl = s.group.getObjectByName("snitchLabel");
     if (lbl) lbl.visible = false;
   });
   mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
@@ -349,10 +335,10 @@ function onMouseMoveHover(event) {
   let hovering = false;
   if (intersects.length > 0) {
     let root = intersects[0].object;
-    while (root.parent && root.parent.type !== 'Scene') {
+    while (root.parent && root.parent.type !== "Scene") {
       root = root.parent;
     }
-    const lbl = root.getObjectByName('snitchLabel');
+    const lbl = root.getObjectByName("snitchLabel");
     if (lbl) lbl.visible = true;
 
     let obj = intersects[0].object;
@@ -362,8 +348,8 @@ function onMouseMoveHover(event) {
     if (obj && obj.userData.isLink) hovering = true;
   }
 
-  if (hovering) document.body.classList.add('hover-link');
-  else document.body.classList.remove('hover-link');
+  if (hovering) document.body.classList.add("hover-link");
+  else document.body.classList.remove("hover-link");
 }
 
 function onWindowResize() {
@@ -376,16 +362,15 @@ function onWindowResize() {
 
   const isMob = checkIsMobile();
   snitches.forEach((s) => {
-    if (isMob && s.radiusBase !== 'large') {
+    if (isMob && s.radiusBase !== "large") {
       s.radius = s.isHero ? 6.8 : 4.5 + Math.random() * 5;
-      s.radiusBase = 'large';
-    } else if (!isMob && s.radiusBase !== 'small') {
+      s.radiusBase = "large";
+    } else if (!isMob && s.radiusBase !== "small") {
       s.radius = s.isHero ? 3.5 : 2.5 + Math.random() * 3;
-      s.radiusBase = 'small';
+      s.radiusBase = "small";
     }
   });
 
-  // ★ 縮放後重算 dock 的 3D 鎖點
   updateDockedSnitchLock();
 }
 
@@ -396,7 +381,6 @@ function animate() {
   const easeOutCubic = (x) => 1 - Math.pow(1 - x, 3);
 
   snitches.forEach((s, idx) => {
-    // ★ hero dock 狀態：每幀強制鎖定位置與 front
     if (s.isHero && s.isDocked) {
       if (s.lockedPosition) {
         s.group.position.copy(s.lockedPosition);
@@ -420,8 +404,7 @@ function animate() {
     const extraAngle = u < 1 ? -2.3 * Math.PI * 2 * (1 - u) : 0;
     const baseAngle = t * s.speed + s.phase;
     const angle = baseAngle + extraAngle;
-    const rNow =
-      s.radius * easeOutCubic(u) + Math.sin(t * 0.3 + idx) * 0.2 * u;
+    const rNow = s.radius * easeOutCubic(u) + Math.sin(t * 0.3 + idx) * 0.2 * u;
     const x = rNow * Math.cos(angle) * Math.cos(s.inclination);
     const z = rNow * Math.sin(angle) * Math.cos(s.inclination);
     const y =
@@ -438,17 +421,12 @@ function animate() {
     s.isFront = s.group.position.z > 0;
   });
 
-  // Render Pipeline
   snitches.forEach((s) => {
     s.group.visible = !s.isFront;
   });
   rendererBack.render(scene, camera);
 
   rendererFront.clear();
-
-  // 如果信件沒有顯示，才顯示前景的金探子 (或者你想在信件下也看到金探子，就拿掉這個 if)
-  // 這裡建議：信件顯示時，金探子繼續跑，但在信件下面
-  // 但由於 AdmissionLetter 是 fixed z-index 9999，它會自然蓋住 canvasFront
   snitches.forEach((s) => {
     s.group.visible = s.isFront;
   });
@@ -490,7 +468,6 @@ onMounted(() => {
   dirLight.position.set(5, 8, 4);
   scene.add(dirLight);
 
-  // 初始化金探子 (移除了 initBurnScene)
   initSnitches(textureLoader);
 
   raycaster = new THREE.Raycaster();
@@ -499,30 +476,38 @@ onMounted(() => {
   dragOffset = new THREE.Vector3();
   clock = new THREE.Clock();
 
-  window.addEventListener('mousedown', onDragStart);
-  window.addEventListener('mousemove', onDragMove);
-  window.addEventListener('mouseup', onDragEnd);
-  window.addEventListener('click', onDocumentClick);
-  window.addEventListener('touchstart', onDragStart, { passive: false });
-  window.addEventListener('touchmove', onDragMove, { passive: false });
-  window.addEventListener('touchend', onDragEnd);
-  window.addEventListener('resize', onWindowResize);
-  window.addEventListener('mousemove', onMouseMoveHover);
+  window.addEventListener("mousedown", onDragStart);
+  window.addEventListener("mousemove", onDragMove);
+  window.addEventListener("mouseup", onDragEnd);
+  window.addEventListener("click", onDocumentClick);
+  window.addEventListener("touchstart", onDragStart, { passive: false });
+  window.addEventListener("touchmove", onDragMove, { passive: false });
+  window.addEventListener("touchend", onDragEnd);
+  window.addEventListener("resize", onWindowResize);
+  window.addEventListener("mousemove", onMouseMoveHover);
 
   animate();
 });
 
 onUnmounted(() => {
   cancelAnimationFrame(animationId);
-  window.removeEventListener('mousedown', onDragStart);
-  window.removeEventListener('mousemove', onDragMove);
-  window.removeEventListener('mouseup', onDragEnd);
-  window.removeEventListener('click', onDocumentClick);
-  window.removeEventListener('touchstart', onDragStart);
-  window.removeEventListener('touchmove', onDragMove);
-  window.removeEventListener('touchend', onDragEnd);
-  window.removeEventListener('resize', onWindowResize);
-  window.removeEventListener('mousemove', onMouseMoveHover);
+  window.removeEventListener("mousedown", onDragStart);
+  window.removeEventListener("mousemove", onDragMove);
+  window.removeEventListener("mouseup", onDragEnd);
+  window.removeEventListener("click", onDocumentClick);
+  window.removeEventListener("touchstart", onDragStart);
+  window.removeEventListener("touchmove", onDragMove);
+  window.removeEventListener("touchend", onDragEnd);
+  window.removeEventListener("resize", onWindowResize);
+  window.removeEventListener("mousemove", onMouseMoveHover);
+
+  // ★ 1. 停止 requestAnimationFrame (最重要!)
+  if (animationId) {
+    cancelAnimationFrame(animationId);
+    animationId = null; // 確保清空
+  }
+  // ★ 2. 停止所有 GSAP 動畫
+  gsap.killTweensOf("*"); // 殺掉所有正在執行的 tween
 });
 
 // --- Setup Snitches (保持不變) ---
@@ -572,20 +557,20 @@ function initSnitches(loader) {
   };
 
   const createTextLabel = (text) => {
-    const cvs = document.createElement('canvas');
-    const ctx = cvs.getContext('2d');
+    const cvs = document.createElement("canvas");
+    const ctx = cvs.getContext("2d");
     cvs.width = 512;
     cvs.height = 128;
-    ctx.font = 'bold 48px Georgia, serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.shadowColor = 'rgba(0,0,0,0.8)';
+    ctx.font = "bold 48px Georgia, serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.shadowColor = "rgba(0,0,0,0.8)";
     ctx.shadowBlur = 5;
     ctx.shadowOffsetX = 2;
     ctx.shadowOffsetY = 2;
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = "#ffffff";
     ctx.fillText(text, 256, 64);
-    ctx.strokeStyle = '#ffd700';
+    ctx.strokeStyle = "#ffd700";
     ctx.lineWidth = 2.5;
     ctx.strokeText(text, 256, 64);
     const tex = new THREE.CanvasTexture(cvs);
@@ -681,7 +666,7 @@ function initSnitches(loader) {
         const lbl = createTextLabel(linkData.name);
         lbl.position.set(0, 0.85, 0);
         lbl.visible = false;
-        lbl.name = 'snitchLabel';
+        lbl.name = "snitchLabel";
         scrollGroup.add(lbl);
       }
       scrollGroup.userData = { url: linkData.url, isLink: true };
@@ -723,16 +708,16 @@ function initSnitches(loader) {
   const isMobile = checkIsMobile();
   let menuIdx = 0;
   const menuItemsData = [
-    { name: 'Classes', img: '/home-class-book.png', url: '#schedule' },
-    { name: 'Mentors', img: '/home-professor-people.png', url: '#professors' },
-    { name: 'Daily Prophet', img: '/home-news-owl.png', url: '#map' },
-    { name: 'Diagon Alley', img: '/home-shopping-money.png', url: '#alley' },
-    { name: 'Annual Events', img: '/home-annual-lantern.png', url: '#events' },
-    { name: 'History', img: '/home-about-badge.png', url: '#about' },
+    { name: "Classes", img: "/home-class-book.png", url: "#schedule" },
+    { name: "Mentors", img: "/home-professor-people.png", url: "#professors" },
+    { name: "Daily Prophet", img: "/home-news-owl.png", url: "#map" },
+    { name: "Diagon Alley", img: "/home-shopping-money.png", url: "#alley" },
+    { name: "Annual Events", img: "/home-annual-lantern.png", url: "#events" },
+    { name: "History", img: "/home-about-badge.png", url: "#about" },
     {
-      name: 'Survival Guide',
-      img: '/home-survival-compass.png',
-      url: '#survival',
+      name: "Survival Guide",
+      img: "/home-survival-compass.png",
+      url: "#survival",
     },
   ];
 
@@ -764,7 +749,7 @@ function initSnitches(loader) {
       isFront: false,
       isDocked: false,
       lockedPosition: null,
-      radiusBase: isMobile ? 'large' : 'small',
+      radiusBase: isMobile ? "large" : "small",
       isHero,
     });
     scene.add(snitch.group);
@@ -779,12 +764,7 @@ function initSnitches(loader) {
   position: relative;
   overflow: hidden;
   touch-action: none;
-    background: radial-gradient(
-    circle at 50% 30%,
-    #f4efe4,
-    #d3d7e8,
-    #7a8aa5
-  );
+  background: radial-gradient(circle at 50% 30%, #f4efe4, #d3d7e8, #7a8aa5);
 }
 canvas {
   display: block;
@@ -812,8 +792,7 @@ canvas {
   pointer-events: none;
   width: 811px;
   max-width: 45vw;
-  animation: expandFromPoint 3s
-    cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  animation: expandFromPoint 3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   opacity: 0;
 }
 #logo-img {
@@ -874,14 +853,11 @@ canvas {
   );
   border-color: rgba(255, 255, 255, 0.9);
   transform: translate(-50%, -50%) scale(1.3);
-  box-shadow:
-    0 0 20px rgba(255, 255, 255, 0.8),
-    0 0 40px rgba(255, 215, 0, 0.6),
-    0 0 80px rgba(255, 100, 0, 0.4),
-    0 0 120px rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.8), 0 0 40px rgba(255, 215, 0, 0.6),
+    0 0 80px rgba(255, 100, 0, 0.4), 0 0 120px rgba(255, 255, 255, 0.2);
 }
 #socket-visual::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 50%;
   left: 50%;
@@ -917,13 +893,8 @@ canvas {
   background: #fff;
   border-color: #fff;
   transform: translate(-50%, -50%) scale(0.8);
-  box-shadow:
-    0 0 60px rgba(255, 255, 255, 1),
-    0 0 120px rgba(255, 215, 0, 0.8);
-  transition:
-    transform 0.2s,
-    background 0.2s,
-    box-shadow 0.2s;
+  box-shadow: 0 0 60px rgba(255, 255, 255, 1), 0 0 120px rgba(255, 215, 0, 0.8);
+  transition: transform 0.2s, background 0.2s, box-shadow 0.2s;
 }
 #socket-visual.docked::after {
   opacity: 0;
@@ -968,7 +939,7 @@ canvas {
   overflow: hidden;
 }
 .envelope-body::after {
-  content: '';
+  content: "";
   position: absolute;
   bottom: 0;
   left: 0;
@@ -976,13 +947,12 @@ canvas {
   height: 0;
   border-style: solid;
   border-width: 120px 170px 0 170px;
-  border-color:
-    transparent #e0ccb3 #e0ccb3 transparent;
+  border-color: transparent #e0ccb3 #e0ccb3 transparent;
   z-index: 11;
   pointer-events: none;
 }
 .envelope-body::before {
-  content: '';
+  content: "";
   position: absolute;
   bottom: 0;
   left: 0;
@@ -990,8 +960,7 @@ canvas {
   height: 0;
   border-style: solid;
   border-width: 0 170px 130px 170px;
-  border-color:
-    transparent transparent #c9ad8a transparent;
+  border-color: transparent transparent #c9ad8a transparent;
   z-index: 12;
   pointer-events: none;
 }
@@ -1004,8 +973,7 @@ canvas {
   background: #bf9e7a;
   clip-path: polygon(0 0, 100% 0, 50% 100%);
   transform-origin: top center;
-  transition: transform 0.8s
-    cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 15;
 }
 .wax-seal {
@@ -1015,18 +983,12 @@ canvas {
   transform: translate(-50%, -50%);
   width: 55px;
   height: 55px;
-  background: radial-gradient(
-    circle,
-    #8b0000 0%,
-    #5c0000 100%
-  );
+  background: radial-gradient(circle, #8b0000 0%, #5c0000 100%);
   border-radius: 50%;
   border: 2px solid #6b0000;
   z-index: 16;
   box-shadow: 0 3px 6px rgba(0, 0, 0, 0.4);
-  transition:
-    transform 0.4s,
-    opacity 0.4s;
+  transition: transform 0.4s, opacity 0.4s;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1037,7 +999,7 @@ canvas {
   text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
 }
 .wax-seal::after {
-  content: 'F';
+  content: "F";
 }
 #envelope-container.open .envelope-flap {
   transform: rotateX(180deg);
@@ -1061,5 +1023,22 @@ canvas {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+/* ★ 修改了這裡 ★ */
+.linktosurvival {
+  position: absolute; /* 絕對定位 */
+  top: 20px; /* 距離頂部 20px */
+  left: 20px; /* 距離左側 20px */
+  z-index: 1000; /* 確保在最上層 */
+  cursor: pointer;
+}
+.linktosurvival button {
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+  background-color: rgba(0, 0, 0, 0.7);
+  color: #ffd700;
+  border: 1px solid #ffd700;
+  border-radius: 5px;
 }
 </style>
