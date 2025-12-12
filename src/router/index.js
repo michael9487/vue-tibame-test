@@ -5,6 +5,10 @@ import AdminDashboard from "../views/AdminDashboard.vue";
 import MemberManagement from "../views/MemberManagement.vue";
 import ProductManagement from "../views/ProductManagement.vue";
 import OrderManagement from "../views/OrderManagement.vue";
+import CouponManagement from "../views/CouponManagement.vue";
+import NewsManagement from "../views/NewsManagement.vue";
+import AnnualEventManagement from "../views/AnnualEventManagement.vue";
+
 import ParallaxTest from "../views/ParallaxText.vue";
 import HomeTest from "../views/HomeTest.vue";
 import ClassesTest from "../views/classesTest.vue";
@@ -49,7 +53,7 @@ const router = createRouter({
       component: ClassesTest,
     },
     {
-      path: "/dashboard",
+      path: "/admin",
       component: AdminDashboard,
       children: [
         {
@@ -57,7 +61,7 @@ const router = createRouter({
           redirect: { name: 'MemberManagement' } 
         },
         {
-          path: "/member-management",
+          path: "member-management",
           name: "MemberManagement",
           component: MemberManagement,
         },
@@ -70,6 +74,21 @@ const router = createRouter({
           path: "order-management",
           name: "OrderManagement",
           component: OrderManagement,
+        },
+                {
+          path: "coupon-management",
+          name: "CouponManagement",
+          component: CouponManagement,
+        },
+                {
+          path: "news-management",
+          name: "NewsManagement",
+          component: NewsManagement,
+        },
+                {
+          path: "annual-event-management",
+          name: "AnnualEventManagement",
+          component: AnnualEventManagement,
         },
       ],
     },
